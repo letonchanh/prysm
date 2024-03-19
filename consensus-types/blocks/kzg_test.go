@@ -108,7 +108,7 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 // in the Body's Merkle tree based on the index of the KZG commitment list in the Body.
 func Test_KZGRootIndex(t *testing.T) {
 	// Level of the KZG commitment root's parent.
-	kzgParentRootLevel, err := ceilLog2(kzgPosition)
+	kzgParentRootLevel, err := ceilLog2(bodyLength)
 	require.NoError(t, err)
 	// Merkle index of the KZG commitment root's parent.
 	// The parent's left child is the KZG commitment root,
