@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	gcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -45,6 +46,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Custom type
+type stringSlice []string
+
+// Implement the flag.Value interface
+func (s *stringSlice) String() string {
+	return strings.Join(*s, ",")
+}
+
+func (s *stringSlice) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
 var (
 	debug                 = flag.Bool("debug", false, "Enable debug logging")
 	logFileName           = flag.String("log-file", "", "Specify log filename, relative or absolute")
@@ -54,7 +68,7 @@ var (
 	externalIP            = flag.String("external-ip", "", "External IP for the bootnode")
 	forkVersion           = flag.String("fork-version", "", "Fork Version that the bootnode uses")
 	genesisValidatorsRoot = flag.String("genesis-root", "", "Genesis Validators Root the beacon node uses")
-	seedNode              = flag.String("seed-node", "", "External node to connect to")
+	seedNodes             stringSlice
 	log                   = logrus.WithField("prefix", "bootnode")
 	discv5PeersCount      = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
@@ -67,6 +81,7 @@ type handler struct {
 }
 
 func main() {
+	flag.Var(&seedNodes, "seed-node", "External node to connect to")
 	flag.Parse()
 
 	if *logFileName != "" {
@@ -91,13 +106,14 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	if *seedNode != "" {
-		log.Debugf("Adding seed node %s", *seedNode)
-		node, err := enode.Parse(enode.ValidSchemes, *seedNode)
+
+	for _, seedNode := range seedNodes {
+		log.Debugf("Adding seed node %s", seedNode)
+		node, err := enode.Parse(enode.ValidSchemes, seedNode)
 		if err != nil {
 			log.Fatal(err)
 		}
-		cfg.Bootnodes = []*enode.Node{node}
+		cfg.Bootnodes = append(cfg.Bootnodes, node)
 	}
 	ipAddr, err := network.ExternalIP()
 	if err != nil {
