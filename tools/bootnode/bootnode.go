@@ -46,14 +46,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Custom type
+// stringSlice is a flag.Value that implements a slice of strings.
 type stringSlice []string
 
-// Implement the flag.Value interface
+// String returns the slice of strings as a comma-separated string.
+// It implements the flag.Value interface
 func (s *stringSlice) String() string {
 	return strings.Join(*s, ",")
 }
 
+// Set appends a string to the slice of strings.
 func (s *stringSlice) Set(value string) error {
 	*s = append(*s, value)
 	return nil
