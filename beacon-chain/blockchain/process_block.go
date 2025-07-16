@@ -84,6 +84,22 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		s.rollbackBlock(ctx, cfg.roblock.Root())
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", cfg.roblock.Block().Slot())
 	}
+	
+	// Log Eth1Data information from the processed block
+	if cfg.roblock.Block().Body() != nil && cfg.roblock.Block().Body().Eth1Data() != nil {
+		blockEth1Data := cfg.roblock.Block().Body().Eth1Data()
+		stateEth1Data := cfg.postState.Eth1Data()
+		log.WithFields(logrus.Fields{
+			"slot":                   cfg.roblock.Block().Slot(),
+			"blockRoot":              fmt.Sprintf("%#x", cfg.roblock.Root()),
+			"blockEth1Hash":          fmt.Sprintf("%#x", blockEth1Data.BlockHash),
+			"blockEth1DepositCount":  blockEth1Data.DepositCount,
+			"stateEth1Hash":          fmt.Sprintf("%#x", stateEth1Data.BlockHash),
+			"stateEth1DepositCount":  stateEth1Data.DepositCount,
+			"stateEth1DepositIndex":  cfg.postState.Eth1DepositIndex(),
+		}).Debug("Processed block with Eth1Data")
+	}
+	
 	if err := s.handleBlockAttestations(ctx, cfg.roblock.Block(), cfg.postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
 	}
