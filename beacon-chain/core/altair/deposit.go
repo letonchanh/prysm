@@ -2,6 +2,7 @@ package altair
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
@@ -11,6 +12,7 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v6/runtime/version"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
@@ -88,9 +90,17 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, allSi
 		}
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
-	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
+	oldIndex := beaconState.Eth1DepositIndex()
+	newIndex := oldIndex + 1
+	if err := beaconState.SetEth1DepositIndex(newIndex); err != nil {
 		return nil, err
 	}
+	log.WithFields(log.Fields{
+		"slot":             beaconState.Slot(),
+		"oldDepositIndex":  oldIndex,
+		"newDepositIndex":  newIndex,
+		"depositPublicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deposit.Data.PublicKey)),
+	}).Debug("Eth1DepositIndex updated during deposit processing")
 
 	return ApplyDeposit(beaconState, deposit.Data, allSignaturesVerified)
 }

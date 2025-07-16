@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v6/config/params"
 	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 // ProcessEth1DataInBlock is an operation performed on each
@@ -35,6 +37,12 @@ func ProcessEth1DataInBlock(_ context.Context, beaconState state.BeaconState, et
 		if err := beaconState.SetEth1Data(eth1Data); err != nil {
 			return nil, err
 		}
+		log.WithFields(logrus.Fields{
+			"slot":            beaconState.Slot(),
+			"eth1BlockHash":   fmt.Sprintf("%#x", eth1Data.BlockHash),
+			"eth1DepositRoot": fmt.Sprintf("%#x", eth1Data.DepositRoot),
+			"eth1DepositCount": eth1Data.DepositCount,
+		}).Debug("BeaconState Eth1Data updated with majority vote")
 	}
 	return beaconState, nil
 }
