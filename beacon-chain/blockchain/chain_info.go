@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
@@ -20,6 +21,7 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v6/time/slots"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -267,7 +269,17 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 	if !s.hasHeadState() {
 		return &ethpb.Eth1Data{}
 	}
-	return s.head.state.Eth1Data()
+	eth1Data := s.head.state.Eth1Data()
+	
+	// Log Eth1Data for debugging
+	log.WithFields(logrus.Fields{
+		"headSlot":        s.headSlot(),
+		"eth1BlockHash":   fmt.Sprintf("%#x", eth1Data.BlockHash),
+		"eth1DepositRoot": fmt.Sprintf("%#x", eth1Data.DepositRoot),
+		"eth1DepositCount": eth1Data.DepositCount,
+	}).Debug("HeadETH1Data accessed from database")
+	
+	return eth1Data
 }
 
 // GenesisTime returns the genesis time of beacon chain.
