@@ -29,6 +29,7 @@ import (
 	"github.com/OffchainLabs/prysm/v6/runtime/version"
 	"github.com/OffchainLabs/prysm/v6/time/slots"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -106,6 +107,28 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	postState, isValidPayload, err := s.validateExecutionAndConsensus(ctx, preState, roblock)
 	if err != nil {
 		return err
+	}
+	
+	// Log Eth1Data changes during block processing
+	if blockCopy.Block().Body() != nil && blockCopy.Block().Body().Eth1Data() != nil {
+		blockEth1Data := blockCopy.Block().Body().Eth1Data()
+		preStateEth1Data := preState.Eth1Data()
+		postStateEth1Data := postState.Eth1Data()
+		
+		log.WithFields(logrus.Fields{
+			"slot":                      blockCopy.Block().Slot(),
+			"blockRoot":                 fmt.Sprintf("%#x", blockRoot),
+			"blockEth1Hash":             fmt.Sprintf("%#x", blockEth1Data.BlockHash),
+			"blockEth1DepositCount":     blockEth1Data.DepositCount,
+			"preStateEth1Hash":          fmt.Sprintf("%#x", preStateEth1Data.BlockHash),
+			"preStateEth1DepositCount":  preStateEth1Data.DepositCount,
+			"preStateEth1DepositIndex":  preState.Eth1DepositIndex(),
+			"postStateEth1Hash":         fmt.Sprintf("%#x", postStateEth1Data.BlockHash),
+			"postStateEth1DepositCount": postStateEth1Data.DepositCount,
+			"postStateEth1DepositIndex": postState.Eth1DepositIndex(),
+			"eth1DataChanged":           !bytes.Equal(preStateEth1Data.BlockHash, postStateEth1Data.BlockHash),
+			"depositIndexChanged":       preState.Eth1DepositIndex() != postState.Eth1DepositIndex(),
+		}).Debug("ReceiveBlock: Eth1Data comparison")
 	}
 
 	daWaitedTime, err := s.handleDA(ctx, blockCopy, blockRoot, avs)
